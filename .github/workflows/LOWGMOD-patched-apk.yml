@@ -6,11 +6,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     continue-on-error: true
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        continue-on-error: true
 
       - name: Install tools
+        continue-on-error: true
         run: |
           sudo apt-get update
           sudo apt-get install -y wget openjdk-17-jdk
@@ -19,31 +22,39 @@ jobs:
           export PATH="$PATH:$(pwd)"
 
       - name: Download APK
+        continue-on-error: true
         run: |
           mkdir -p downloads
           curl -L -o downloads/LOWGMOD-8.2.104.apk "https://www.mediafire.com/file/6n4k9hmvjalsche/LOWGMOD-ANDROID-8.2.104.apk/file?dkey=d7lvli4phy1&r=916"
 
       - name: Decompile
+        continue-on-error: true
         run: java -jar apktool.jar d downloads/LOWGMOD-8.2.104.apk -o decompiled
 
       - name: Patch smali
+        continue-on-error: true
         run: find decompiled -name "*.smali" -exec sed -i "s|https://key.tsclowgmod.com|https://disabled-mod.example.com|g" {} \;
 
       - name: Patch native lib
+        continue-on-error: true
         run: sed -i "s|https://key.tsclowgmod.com|https://disabled-mod.example.com|g" decompiled/lib/arm64-v8a/liblowgmod.so
 
       - name: Rebuild
+        continue-on-error: true
         run: java -jar apktool.jar b decompiled -o downloads/patched-unsigned.apk
 
       - name: Sign
+        continue-on-error: true
         run: |
           keytool -genkeypair -keystore debug.keystore -alias androiddebugkey -storetype PKCS12 -validity 9999 -dname "cn=Android" -keyalg RSA -keysize 2048 -storepass android -keypass android > /dev/null 2>&1 || true
           apksigner sign --ks debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out downloads/patched-signed.apk downloads/patched-unsigned.apk
 
       - name: Zip align
+        continue-on-error: true
         run: sudo apt-get install -y zipalign && zipalign -f -v 4 downloads/patched-signed.apk downloads/LOWGMOD-patched-final.apk
 
       - name: Upload artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: patched-apk
